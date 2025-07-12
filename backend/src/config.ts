@@ -29,6 +29,8 @@ export interface Config {
   venues: {
     binance: VenueConfig;
     uniswap: VenueConfig;
+    coinbase: VenueConfig;
+    kraken: VenueConfig;
   };
   arbitrage: ArbitrageConfig;
   polling: {
