@@ -18,12 +18,29 @@ export class CoinbaseConnector implements VenueConnector {
     return true;
   }
 
-  private formatSymbol(baseSymbol: string, quoteSymbol: string): string {
-    return `${baseSymbol.toUpperCase()}-${quoteSymbol.toUpperCase()}`;
+  private formatSymbol(baseSymbol: string, quoteSymbol: string): string | null {
+    // Coinbase uses USD, not USDT, and doesn't support many stablecoin pairs
+    const base = baseSymbol.toUpperCase();
+    const quote = quoteSymbol.toUpperCase();
+    
+    // Only support major pairs that actually exist and are active
+    if (base === 'ETH' && (quote === 'USDT' || quote === 'USD')) {
+      return 'ETH-USD';
+    }
+    if (base === 'BTC' && (quote === 'USDT' || quote === 'USD')) {
+      return 'BTC-USD';
+    }
+    
+    // For other pairs, return null to indicate unsupported
+    return null;
   }
 
   async getOrderbook(baseSymbol: string, quoteSymbol: string): Promise<Orderbook> {
     const symbol = this.formatSymbol(baseSymbol, quoteSymbol);
+    
+    if (!symbol) {
+      throw new Error(`Pair ${baseSymbol}/${quoteSymbol} not supported on Coinbase`);
+    }
     
     try {
       const response = await axios.get(`${this.baseUrl}/products/${symbol}/book`, {
@@ -55,6 +72,12 @@ export class CoinbaseConnector implements VenueConnector {
   }
 
   async getPriceData(baseSymbol: string, quoteSymbol: string): Promise<PriceData> {
+    const symbol = this.formatSymbol(baseSymbol, quoteSymbol);
+    
+    if (!symbol) {
+      throw new Error(`Pair ${baseSymbol}/${quoteSymbol} not supported on Coinbase`);
+    }
+    
     const orderbook = await this.getOrderbook(baseSymbol, quoteSymbol);
     
     if (orderbook.bids.length === 0 || orderbook.asks.length === 0) {

@@ -7,9 +7,13 @@ const UNISWAP_V3_FACTORY_ADDRESS = '0x1F98431c8aD98523631AE4a59f267346ea31F984';
 const UNISWAP_V3_QUOTER_ADDRESS = '0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6';
 
 const WETH_ADDRESS = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2';
+const WBTC_ADDRESS = '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599';
 const USDT_ADDRESS = '0xdAC17F958D2ee523a2206206994597C13D831ec7';
 const USDC_ADDRESS = '0xA0b86a33E6412E4ca7c2F6e8b7d0A3d6E9c7A1A2b';
 const PYUSD_ADDRESS = '0x6c3ea9036406852006290770BEdFcAbA0e23A0e8';
+const DAI_ADDRESS = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
+const FRAX_ADDRESS = '0x853d955aCEf822Db058eb8505911ED77F175b99e';
+const TUSD_ADDRESS = '0x0000000000085d4780B73119b644AE5ecd22b376';
 
 const QUOTER_ABI = [
   {
@@ -35,9 +39,14 @@ export class UniswapConnector implements VenueConnector {
   private readonly tokenMap: { [key: string]: { address: string; decimals: number } } = {
     'ETH': { address: WETH_ADDRESS, decimals: 18 },
     'WETH': { address: WETH_ADDRESS, decimals: 18 },
+    'BTC': { address: WBTC_ADDRESS, decimals: 8 },
+    'WBTC': { address: WBTC_ADDRESS, decimals: 8 },
     'USDT': { address: USDT_ADDRESS, decimals: 6 },
     'USDC': { address: USDC_ADDRESS, decimals: 6 },
-    'PYUSD': { address: PYUSD_ADDRESS, decimals: 6 }
+    'PYUSD': { address: PYUSD_ADDRESS, decimals: 6 },
+    'DAI': { address: DAI_ADDRESS, decimals: 18 },
+    'FRAX': { address: FRAX_ADDRESS, decimals: 18 },
+    'TUSD': { address: TUSD_ADDRESS, decimals: 18 }
   };
 
   constructor(rpcUrl: string) {

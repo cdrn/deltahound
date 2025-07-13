@@ -16,23 +16,41 @@ export class KrakenConnector implements VenueConnector {
     return true;
   }
 
-  private formatSymbol(baseSymbol: string, quoteSymbol: string): string {
+  private formatSymbol(baseSymbol: string, quoteSymbol: string): string | null {
     const symbolMap: { [key: string]: string } = {
       'ETH': 'XETH',
       'BTC': 'XXBT',
       'USDT': 'USDT',
       'USDC': 'USDC',
-      'PYUSD': 'PYUSD'
+      'DAI': 'DAI'
     };
 
     const base = symbolMap[baseSymbol.toUpperCase()] || baseSymbol.toUpperCase();
     const quote = symbolMap[quoteSymbol.toUpperCase()] || quoteSymbol.toUpperCase();
+    
+    // Kraken uses specific formats
+    if (baseSymbol.toUpperCase() === 'ETH' && quoteSymbol.toUpperCase() === 'USDT') {
+      return 'XETHZUSD'; // Kraken format for ETH/USD
+    }
+    if (baseSymbol.toUpperCase() === 'ETH' && quoteSymbol.toUpperCase() === 'USDC') {
+      return 'ETHUSDC';
+    }
+    if (baseSymbol.toUpperCase() === 'USDC' && quoteSymbol.toUpperCase() === 'USDT') {
+      return 'USDCUSDT'; // Kraken has this pair!
+    }
+    if (baseSymbol.toUpperCase() === 'USDT' && quoteSymbol.toUpperCase() === 'DAI') {
+      return null; // Kraken doesn't have USDT/DAI
+    }
     
     return `${base}${quote}`;
   }
 
   async getOrderbook(baseSymbol: string, quoteSymbol: string): Promise<Orderbook> {
     const symbol = this.formatSymbol(baseSymbol, quoteSymbol);
+    
+    if (!symbol) {
+      throw new Error(`Pair ${baseSymbol}/${quoteSymbol} not supported on Kraken`);
+    }
     
     try {
       const response = await axios.get(`${this.baseUrl}/Depth`, {
@@ -71,6 +89,12 @@ export class KrakenConnector implements VenueConnector {
   }
 
   async getPriceData(baseSymbol: string, quoteSymbol: string): Promise<PriceData> {
+    const symbol = this.formatSymbol(baseSymbol, quoteSymbol);
+    
+    if (!symbol) {
+      throw new Error(`Pair ${baseSymbol}/${quoteSymbol} not supported on Kraken`);
+    }
+    
     const orderbook = await this.getOrderbook(baseSymbol, quoteSymbol);
     
     if (orderbook.bids.length === 0 || orderbook.asks.length === 0) {

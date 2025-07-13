@@ -1,6 +1,8 @@
 import { config } from './config';
 import { BinanceConnector } from './connectors/binance';
 import { UniswapConnector } from './connectors/uniswap';
+import { CoinbaseConnector } from './connectors/coinbase';
+import { KrakenConnector } from './connectors/kraken';
 import { ArbitrageDetector } from './arbitrage-detector';
 import { PriceNormalizer } from './utils/price-normalizer';
 import { logger } from './utils/logger';
@@ -33,6 +35,32 @@ class DeltaHound {
         logger.info('Uniswap connector initialized');
       } catch (error) {
         logger.error('Failed to initialize Uniswap connector', { error });
+      }
+    }
+
+    if (config.venues.coinbase.enabled) {
+      try {
+        const coinbaseConnector = new CoinbaseConnector(
+          config.venues.coinbase.apiKey,
+          config.venues.coinbase.apiSecret
+        );
+        this.connectors.push(coinbaseConnector);
+        logger.info('Coinbase connector initialized');
+      } catch (error) {
+        logger.error('Failed to initialize Coinbase connector', { error });
+      }
+    }
+
+    if (config.venues.kraken.enabled) {
+      try {
+        const krakenConnector = new KrakenConnector(
+          config.venues.kraken.apiKey,
+          config.venues.kraken.apiSecret
+        );
+        this.connectors.push(krakenConnector);
+        logger.info('Kraken connector initialized');
+      } catch (error) {
+        logger.error('Failed to initialize Kraken connector', { error });
       }
     }
 

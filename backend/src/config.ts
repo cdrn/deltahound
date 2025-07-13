@@ -44,8 +44,20 @@ export interface Config {
 export const config: Config = {
   tradingPairs: [
     {
-      baseSymbol: process.env.BASE_SYMBOL || 'ETH',
-      quoteSymbol: process.env.QUOTE_SYMBOL || 'USDT'
+      baseSymbol: 'ETH',
+      quoteSymbol: 'USDT'
+    },
+    {
+      baseSymbol: 'ETH',
+      quoteSymbol: 'USDC'
+    },
+    {
+      baseSymbol: 'USDC',
+      quoteSymbol: 'USDT'
+    },
+    {
+      baseSymbol: 'USDT',
+      quoteSymbol: 'DAI'
     }
   ],
   venues: {
@@ -59,6 +71,18 @@ export const config: Config = {
       name: 'Uniswap V3',
       enabled: process.env.UNISWAP_ENABLED === 'true' || true,
       rpcUrl: process.env.ETH_RPC_URL || 'https://mainnet.infura.io/v3/YOUR_PROJECT_ID'
+    },
+    coinbase: {
+      name: 'Coinbase Pro',
+      enabled: process.env.COINBASE_ENABLED === 'true' || false,
+      apiKey: process.env.COINBASE_API_KEY,
+      apiSecret: process.env.COINBASE_API_SECRET
+    },
+    kraken: {
+      name: 'Kraken',
+      enabled: process.env.KRAKEN_ENABLED === 'true' || false,
+      apiKey: process.env.KRAKEN_API_KEY,
+      apiSecret: process.env.KRAKEN_API_SECRET
     }
   },
   arbitrage: {
