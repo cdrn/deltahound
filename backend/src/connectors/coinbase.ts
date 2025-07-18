@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { VenueConnector, Orderbook, PriceData, OrderbookEntry } from '../types';
+import { PairMapper } from '../utils/pair-mapper';
 
 export class CoinbaseConnector implements VenueConnector {
   public readonly name = 'Coinbase Pro';
@@ -19,20 +20,8 @@ export class CoinbaseConnector implements VenueConnector {
   }
 
   private formatSymbol(baseSymbol: string, quoteSymbol: string): string | null {
-    // Coinbase uses USD, not USDT, and doesn't support many stablecoin pairs
-    const base = baseSymbol.toUpperCase();
-    const quote = quoteSymbol.toUpperCase();
-    
-    // Only support major pairs that actually exist and are active
-    if (base === 'ETH' && (quote === 'USDT' || quote === 'USD')) {
-      return 'ETH-USD';
-    }
-    if (base === 'BTC' && (quote === 'USDT' || quote === 'USD')) {
-      return 'BTC-USD';
-    }
-    
-    // For other pairs, return null to indicate unsupported
-    return null;
+    const pair = `${baseSymbol}/${quoteSymbol}`;
+    return PairMapper.getVenueSymbol(this.name, pair);
   }
 
   async getOrderbook(baseSymbol: string, quoteSymbol: string): Promise<Orderbook> {

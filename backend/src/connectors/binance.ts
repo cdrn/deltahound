@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { VenueConnector, Orderbook, PriceData, OrderbookEntry } from '../types';
+import { PairMapper } from '../utils/pair-mapper';
 
 export class BinanceConnector implements VenueConnector {
   public readonly name = 'Binance';
@@ -16,12 +17,17 @@ export class BinanceConnector implements VenueConnector {
     return true;
   }
 
-  private formatSymbol(baseSymbol: string, quoteSymbol: string): string {
-    return `${baseSymbol.toUpperCase()}${quoteSymbol.toUpperCase()}`;
+  private formatSymbol(baseSymbol: string, quoteSymbol: string): string | null {
+    const pair = `${baseSymbol}/${quoteSymbol}`;
+    return PairMapper.getVenueSymbol(this.name, pair);
   }
 
   async getOrderbook(baseSymbol: string, quoteSymbol: string): Promise<Orderbook> {
     const symbol = this.formatSymbol(baseSymbol, quoteSymbol);
+    
+    if (!symbol) {
+      throw new Error(`Pair ${baseSymbol}/${quoteSymbol} not supported on ${this.name}`);
+    }
     
     try {
       const response = await axios.get(`${this.baseUrl}/depth`, {
@@ -54,6 +60,12 @@ export class BinanceConnector implements VenueConnector {
   }
 
   async getPriceData(baseSymbol: string, quoteSymbol: string): Promise<PriceData> {
+    const symbol = this.formatSymbol(baseSymbol, quoteSymbol);
+    
+    if (!symbol) {
+      throw new Error(`Pair ${baseSymbol}/${quoteSymbol} not supported on ${this.name}`);
+    }
+    
     const orderbook = await this.getOrderbook(baseSymbol, quoteSymbol);
     
     if (orderbook.bids.length === 0 || orderbook.asks.length === 0) {

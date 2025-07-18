@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { VenueConnector, Orderbook, PriceData, OrderbookEntry } from '../types';
+import { PairMapper } from '../utils/pair-mapper';
 
 export class KrakenConnector implements VenueConnector {
   public readonly name = 'Kraken';
@@ -17,32 +18,8 @@ export class KrakenConnector implements VenueConnector {
   }
 
   private formatSymbol(baseSymbol: string, quoteSymbol: string): string | null {
-    const symbolMap: { [key: string]: string } = {
-      'ETH': 'XETH',
-      'BTC': 'XXBT',
-      'USDT': 'USDT',
-      'USDC': 'USDC',
-      'DAI': 'DAI'
-    };
-
-    const base = symbolMap[baseSymbol.toUpperCase()] || baseSymbol.toUpperCase();
-    const quote = symbolMap[quoteSymbol.toUpperCase()] || quoteSymbol.toUpperCase();
-    
-    // Kraken uses specific formats
-    if (baseSymbol.toUpperCase() === 'ETH' && quoteSymbol.toUpperCase() === 'USDT') {
-      return 'XETHZUSD'; // Kraken format for ETH/USD
-    }
-    if (baseSymbol.toUpperCase() === 'ETH' && quoteSymbol.toUpperCase() === 'USDC') {
-      return 'ETHUSDC';
-    }
-    if (baseSymbol.toUpperCase() === 'USDC' && quoteSymbol.toUpperCase() === 'USDT') {
-      return 'USDCUSDT'; // Kraken has this pair!
-    }
-    if (baseSymbol.toUpperCase() === 'USDT' && quoteSymbol.toUpperCase() === 'DAI') {
-      return null; // Kraken doesn't have USDT/DAI
-    }
-    
-    return `${base}${quote}`;
+    const pair = `${baseSymbol}/${quoteSymbol}`;
+    return PairMapper.getVenueSymbol(this.name, pair);
   }
 
   async getOrderbook(baseSymbol: string, quoteSymbol: string): Promise<Orderbook> {
