@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DELTAHOUND — Venue Basis Observatory</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #f3ecdc;
+    --paper-dark: #e9e0cb;
+    --grid-major: rgba(166, 88, 60, 0.28);
+    --grid-minor: rgba(166, 88, 60, 0.12);
+    --ink: #1a1610;
+    --ink-soft: #4a4338;
+    --red: #b3361e;
+    --brass: #8a6d3b;
+    --trace-eth: #1a1610;
+    --trace-base: #15457a;
+    --trace-arb: #205c3b;
+    --trace-sol: #6b3d8f;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 13px;
+    min-height: 100vh;
+    position: relative;
+  }
+
+  /* paper grain */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  .station {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 36px 28px 80px;
+  }
+
+  /* ---- instrument plate header ---- */
+  header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    border-top: 3px double var(--ink);
+    border-bottom: 1px solid var(--ink);
+    padding: 14px 4px 12px;
+    margin-bottom: 8px;
+  }
+  h1 {
+    font-family: "Instrument Serif", serif;
+    font-weight: 400;
+    font-size: 42px;
+    letter-spacing: 0.01em;
+  }
+  h1 .hound { font-style: italic; }
+  .plate {
+    text-align: right;
+    font-size: 11px;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    line-height: 1.7;
+  }
+  .plate .live { color: var(--red); }
+  .plate .live::before {
+    content: "●";
+    margin-right: 6px;
+    animation: blink 2.4s steps(1) infinite;
+  }
+  @keyframes blink { 50% { opacity: 0.15; } }
+
+  .subtitle {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    color: var(--ink-soft);
+    padding: 6px 4px 22px;
+  }
+
+  /* ---- controls ---- */
+  .controls {
+    display: flex;
+    gap: 28px;
+    flex-wrap: wrap;
+    padding: 10px 4px 26px;
+    align-items: center;
+  }
+  .control { display: flex; align-items: center; gap: 10px; }
+  .control label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--brass);
+  }
+  .seg {
+    display: flex;
+    border: 1px solid var(--ink);
+    background: var(--paper-dark);
+  }
+  .seg button {
+    font-family: inherit;
+    font-size: 11px;
+    padding: 5px 12px;
+    border: none;
+    background: transparent;
+    color: var(--ink-soft);
+    cursor: pointer;
+    border-right: 1px solid rgba(26, 22, 16, 0.25);
+    transition: background 0.12s, color 0.12s;
+  }
+  .seg button:last-child { border-right: none; }
+  .seg button:hover { color: var(--ink); }
+  .seg button.on {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  /* ---- drums ---- */
+  .drum {
+    margin-bottom: 26px;
+    border: 1px solid var(--ink);
+    background: var(--paper);
+    box-shadow: 3px 3px 0 rgba(26, 22, 16, 0.12);
+  }
+  .drum-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--ink);
+    background: var(--paper-dark);
+  }
+  .drum-title {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.24em;
+  }
+  .drum-title .swatch {
+    display: inline-block;
+    width: 22px;
+    height: 3px;
+    margin-right: 10px;
+    vertical-align: middle;
+  }
+  .drum-read {
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+  .drum-read .bps { font-weight: 600; }
+  .drum-read .bps.hot { color: var(--red); }
+  .drum-read .venue {
+    color: var(--ink-soft);
+    font-size: 10px;
+    margin-left: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  canvas { display: block; width: 100%; height: 120px; }
+
+  /* ---- logbook ---- */
+  .logbook { margin-top: 44px; }
+  .logbook h2 {
+    font-family: "Instrument Serif", serif;
+    font-weight: 400;
+    font-size: 24px;
+    font-style: italic;
+    margin-bottom: 12px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+  }
+  th {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--brass);
+    text-align: right;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--ink);
+    font-weight: 500;
+  }
+  th:first-child, td:first-child { text-align: left; }
+  td {
+    padding: 7px 10px;
+    text-align: right;
+    border-bottom: 1px dotted rgba(26, 22, 16, 0.25);
+    font-size: 12px;
+  }
+  td.hot { color: var(--red); font-weight: 600; }
+
+  footer {
+    margin-top: 56px;
+    padding-top: 12px;
+    border-top: 3px double var(--ink);
+    font-size: 10px;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .drums.loading { opacity: 0.4; }
+  .drums { transition: opacity 0.3s; }
+</style>
+</head>
+<body>
+<div class="station">
+  <header>
+    <h1>DELTA<span class="hound">HOUND</span></h1>
+    <div class="plate">
+      <div>Stablecoin Venue-Basis Seismograph</div>
+      <div>STN: LOCAL &nbsp;·&nbsp; CMP: USDC/USDT</div>
+      <div class="live" id="live-label">RECORDING</div>
+    </div>
+  </header>
+  <div class="subtitle">Executable deviation from par, basis points · drum reads right to left</div>
+
+  <div class="controls">
+    <div class="control">
+      <label>Size</label>
+      <div class="seg" id="seg-size">
+        <button data-v="1000">$1k</button>
+        <button data-v="10000">$10k</button>
+        <button data-v="100000" class="on">$100k</button>
+        <button data-v="1000000">$1M</button>
+      </div>
+    </div>
+    <div class="control">
+      <label>Window</label>
+      <div class="seg" id="seg-window">
+        <button data-v="60" class="on">1h</button>
+        <button data-v="360">6h</button>
+        <button data-v="1440">24h</button>
+      </div>
+    </div>
+    <div class="control">
+      <label>Direction</label>
+      <div class="seg" id="seg-dir">
+        <button data-v="USDC" class="on">USDC&#8594;USDT</button>
+        <button data-v="USDT">USDT&#8594;USDC</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="drums" id="drums"></div>
+
+  <div class="logbook">
+    <h2>Station log — latest readings</h2>
+    <table id="log-table">
+      <thead>
+        <tr>
+          <th>Chain</th><th>Venue</th><th>Direction</th>
+          <th>$1k</th><th>$10k</th><th>$100k</th><th>$1M</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <footer>
+    <span>deltahound v0.2 — venue drift instrument</span>
+    <span id="updated"></span>
+  </footer>
+</div>
+
+<script>
+const CHAINS = [
+  { id: "ethereum", label: "Ethereum", color: getCss("--trace-eth") },
+  { id: "base",     label: "Base",     color: getCss("--trace-base") },
+  { id: "arbitrum", label: "Arbitrum", color: getCss("--trace-arb") },
+  { id: "solana",   label: "Solana",   color: getCss("--trace-sol") },
+];
+const SIZES = [1000, 10000, 100000, 1000000];
+const HOT_BPS = 5;
+
+let state = { size: 100000, minutes: 60, dir: "USDC" };
+
+function getCss(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+function fmtBps(b) {
+  if (b === null || b === undefined) return "—";
+  return (b >= 0 ? "+" : "") + b.toFixed(2);
+}
+
+// ---- build drums ----
+const drumsEl = document.getElementById("drums");
+for (const c of CHAINS) {
+  const d = document.createElement("div");
+  d.className = "drum";
+  d.innerHTML = `
+    <div class="drum-head">
+      <span class="drum-title"><span class="swatch" style="background:${c.color}"></span>${c.label}</span>
+      <span class="drum-read"><span class="bps" id="read-${c.id}">—</span> bps<span class="venue" id="venue-${c.id}"></span></span>
+    </div>
+    <canvas id="cv-${c.id}" height="120"></canvas>`;
+  drumsEl.appendChild(d);
+}
+
+// ---- segmented controls ----
+function wireSeg(id, key, parse) {
+  document.getElementById(id).addEventListener("click", (e) => {
+    const btn = e.target.closest("button");
+    if (!btn) return;
+    for (const b of btn.parentElement.children) b.classList.remove("on");
+    btn.classList.add("on");
+    state[key] = parse(btn.dataset.v);
+    refresh();
+  });
+}
+wireSeg("seg-size", "size", Number);
+wireSeg("seg-window", "minutes", Number);
+wireSeg("seg-dir", "dir", String);
+
+// ---- drawing ----
+function drawDrum(canvas, points, color, minutes) {
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  const ctx = canvas.getContext("2d");
+  ctx.scale(dpr, dpr);
+
+  // adaptive scale, never tighter than ±6 bps so calm looks calm, and
+  // clipped at ±50 — off-scale readings pin to the drum edge like a real
+  // stylus hitting its stop
+  const CLIP = 50;
+  let maxAbs = 6;
+  for (const p of points) maxAbs = Math.max(maxAbs, Math.abs(p.bps));
+  maxAbs = Math.min(Math.ceil(maxAbs * 1.2), CLIP);
+  const yOf = (bps) =>
+    h / 2 - (Math.max(-maxAbs, Math.min(maxAbs, bps)) / maxAbs) * (h / 2 - 8);
+  const clipped = (bps) => Math.abs(bps) > maxAbs;
+
+  // millimeter grid
+  ctx.strokeStyle = getCss("--grid-minor");
+  ctx.lineWidth = 0.5;
+  for (let x = 0; x < w; x += 8) line(ctx, x, 0, x, h);
+  for (let y = 0; y < h; y += 8) line(ctx, 0, y, w, y);
+  ctx.strokeStyle = getCss("--grid-major");
+  for (let x = 0; x < w; x += 80) line(ctx, x, 0, x, h);
+
+  // par line
+  ctx.strokeStyle = "rgba(179, 54, 30, 0.55)";
+  ctx.lineWidth = 1;
+  ctx.setLineDash([1, 3]);
+  line(ctx, 0, h / 2, w, h / 2);
+  ctx.setLineDash([]);
+
+  // scale labels
+  ctx.fillStyle = "rgba(74, 67, 56, 0.7)";
+  ctx.font = "9px 'IBM Plex Mono', monospace";
+  ctx.fillText(`+${maxAbs}`, 4, 12);
+  ctx.fillText(`−${maxAbs}`, 4, h - 5);
+  ctx.fillText("par", 4, h / 2 - 3);
+
+  if (!points.length) {
+    ctx.fillStyle = "rgba(74, 67, 56, 0.5)";
+    ctx.font = "11px 'IBM Plex Mono', monospace";
+    ctx.fillText("awaiting signal …", w / 2 - 50, h / 2 - 8);
+    return;
+  }
+
+  // time maps to x: right edge = now, left edge = now - window
+  const now = Date.now();
+  const t0 = now - minutes * 60000;
+  const xOf = (ts) => ((ts - t0) / (now - t0)) * w;
+
+  // ink trace
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.4;
+  ctx.lineJoin = "round";
+  ctx.beginPath();
+  points.forEach((p, i) => {
+    const x = xOf(p.ts), y = yOf(p.bps);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // event marks: red ticks where |bps| exceeds threshold, heavy marks
+  // where the reading is pinned off-scale
+  ctx.strokeStyle = getCss("--red");
+  for (const p of points) {
+    const x = xOf(p.ts);
+    if (clipped(p.bps)) {
+      ctx.lineWidth = 2;
+      const yEdge = p.bps > 0 ? 8 : h - 8;
+      line(ctx, x, yEdge - 4, x, yEdge + 4);
+    } else if (Math.abs(p.bps) >= HOT_BPS) {
+      ctx.lineWidth = 1;
+      line(ctx, x, 2, x, 7);
+    }
+  }
+
+  // stylus dot at latest point
+  const last = points[points.length - 1];
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(xOf(last.ts), yOf(last.bps), 2.5, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function line(ctx, x1, y1, x2, y2) {
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.stroke();
+}
+
+// ---- data ----
+async function refresh() {
+  try {
+    const [series, latest] = await Promise.all([
+      fetch(`/api/series?minutes=${state.minutes}&size=${state.size}`).then((r) => r.json()),
+      fetch(`/api/latest`).then((r) => r.json()),
+    ]);
+
+    for (const c of CHAINS) {
+      const pts = series.filter((q) => q.chain === c.id && q.tokenIn === state.dir);
+      drawDrum(document.getElementById(`cv-${c.id}`), pts, c.color, state.minutes);
+      const last = pts[pts.length - 1];
+      const readEl = document.getElementById(`read-${c.id}`);
+      readEl.textContent = last ? fmtBps(last.bps) : "—";
+      readEl.classList.toggle("hot", !!last && Math.abs(last.bps) >= HOT_BPS);
+      document.getElementById(`venue-${c.id}`).textContent = last ? last.venue : "";
+    }
+
+    // logbook: chain x direction rows, size columns
+    const tbody = document.querySelector("#log-table tbody");
+    tbody.innerHTML = "";
+    for (const c of CHAINS) {
+      for (const dir of ["USDC", "USDT"]) {
+        const rows = latest.filter((q) => q.chain === c.id && q.tokenIn === dir);
+        if (!rows.length) continue;
+        const cells = SIZES.map((s) => {
+          const r = rows.find((q) => q.amountIn === s);
+          if (!r) return "<td>—</td>";
+          const hot = Math.abs(r.bps) >= HOT_BPS ? " class=\"hot\"" : "";
+          return `<td${hot}>${fmtBps(r.bps)}</td>`;
+        }).join("");
+        const venue = rows[0].venue;
+        const arrow = dir === "USDC" ? "USDC→USDT" : "USDT→USDC";
+        tbody.insertAdjacentHTML(
+          "beforeend",
+          `<tr><td>${c.label}</td><td style="text-align:right">${venue}</td><td>${arrow}</td>${cells}</tr>`,
+        );
+      }
+    }
+
+    document.getElementById("updated").textContent =
+      "last reading " + new Date().toLocaleTimeString();
+  } catch (err) {
+    document.getElementById("live-label").textContent = "SIGNAL LOST";
+  }
+}
+
+refresh();
+setInterval(refresh, 30000);
+window.addEventListener("resize", refresh);
+</script>
+</body>
+</html>
