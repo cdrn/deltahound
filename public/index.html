@@ -192,20 +192,20 @@
   .legend .val { font-weight: 600; }
   .legend .val.hot { color: var(--red); }
 
-  /* ---- station tabs ---- */
-  .station-bar {
+  /* ---- chain tabs ---- */
+  .chain-bar {
     display: flex;
     align-items: center;
     gap: 14px;
     padding: 4px 4px 14px;
   }
-  .station-bar label {
+  .chain-bar label {
     font-size: 10px;
     text-transform: uppercase;
     letter-spacing: 0.18em;
     color: var(--brass);
   }
-  .station-bar .seg button .key {
+  .chain-bar .seg button .key {
     display: inline-block;
     width: 12px;
     height: 3px;
@@ -298,30 +298,30 @@
     </div>
   </div>
 
-  <!-- all stations overlaid -->
+  <!-- all chains overlaid -->
   <div class="drum drum-main">
     <div class="drum-head">
-      <span class="drum-title">All stations — overlay</span>
+      <span class="drum-title">All chains — overlay</span>
       <span class="legend" id="legend"></span>
     </div>
     <canvas id="cv-all" height="240"></canvas>
   </div>
 
-  <!-- single station behind tabs -->
-  <div class="station-bar">
-    <label>Station</label>
-    <div class="seg" id="seg-station"></div>
+  <!-- single chain behind tabs -->
+  <div class="chain-bar">
+    <label>Chain</label>
+    <div class="seg" id="seg-chain"></div>
   </div>
   <div class="drum">
     <div class="drum-head">
-      <span class="drum-title" id="station-title"></span>
-      <span class="drum-read"><span class="bps" id="station-read">—</span> bps<span class="venue" id="station-venue"></span></span>
+      <span class="drum-title" id="chain-title"></span>
+      <span class="drum-read"><span class="bps" id="chain-read">—</span> bps<span class="venue" id="chain-venue"></span></span>
     </div>
-    <canvas id="cv-station" height="120"></canvas>
+    <canvas id="cv-chain" height="120"></canvas>
   </div>
 
   <div class="logbook">
-    <h2>Station log — latest readings</h2>
+    <h2>Chain log — latest readings</h2>
     <table id="log-table">
       <thead>
         <tr>
@@ -349,7 +349,7 @@ const CHAINS = [
 const SIZES = [1000, 10000, 100000, 1000000];
 const HOT_BPS = 5;
 
-let state = { size: 100000, minutes: 60, dir: "USDC", station: "ethereum" };
+let state = { size: 100000, minutes: 60, dir: "USDC", chain: "ethereum" };
 let lastSeries = null; // cache so tab switches redraw without refetch
 
 function getCss(name) {
@@ -361,14 +361,14 @@ function fmtBps(b) {
   return (b >= 0 ? "+" : "") + b.toFixed(2);
 }
 
-// ---- build station tabs ----
-const segStation = document.getElementById("seg-station");
+// ---- build chain tabs ----
+const segChain = document.getElementById("seg-chain");
 for (const c of CHAINS) {
   const btn = document.createElement("button");
   btn.dataset.v = c.id;
   btn.innerHTML = `<span class="key" style="background:${c.color}"></span>${c.label}`;
-  if (c.id === state.station) btn.classList.add("on");
-  segStation.appendChild(btn);
+  if (c.id === state.chain) btn.classList.add("on");
+  segChain.appendChild(btn);
 }
 
 // ---- segmented controls ----
@@ -385,7 +385,7 @@ function wireSeg(id, key, parse, refetch) {
 wireSeg("seg-size", "size", Number, true);
 wireSeg("seg-window", "minutes", Number, true);
 wireSeg("seg-dir", "dir", String, true);
-wireSeg("seg-station", "station", String, false);
+wireSeg("seg-chain", "chain", String, false);
 
 // ---- drawing ----
 // seriesList: [{ points, color }]; all series share one scale.
@@ -510,21 +510,21 @@ function redraw() {
     return `<span><span class="key" style="background:${c.color}"></span>${c.label} <span class="val${hot}">${last ? fmtBps(last.bps) : "—"}</span></span>`;
   }).join("");
 
-  // station drum
-  const chain = CHAINS.find((c) => c.id === state.station);
+  // chain drum
+  const chain = CHAINS.find((c) => c.id === state.chain);
   const pts = byChain(chain.id);
-  document.getElementById("station-title").innerHTML =
+  document.getElementById("chain-title").innerHTML =
     `<span class="swatch" style="background:${chain.color}"></span>${chain.label}`;
   drawDrum(
-    document.getElementById("cv-station"),
+    document.getElementById("cv-chain"),
     [{ points: pts, color: chain.color }],
     state.minutes,
   );
   const last = pts[pts.length - 1];
-  const readEl = document.getElementById("station-read");
+  const readEl = document.getElementById("chain-read");
   readEl.textContent = last ? fmtBps(last.bps) : "—";
   readEl.classList.toggle("hot", !!last && Math.abs(last.bps) >= HOT_BPS);
-  document.getElementById("station-venue").textContent = last ? last.venue : "";
+  document.getElementById("chain-venue").textContent = last ? last.venue : "";
 }
 
 // ---- data ----
