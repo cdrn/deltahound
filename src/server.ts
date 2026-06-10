@@ -2,8 +2,11 @@ import { createServer } from "node:http";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { PORT } from "./config.js";
+import { EVM_CHAINS, PORT, SIZES_USD } from "./config.js";
+import { computeBoard, type LatestQuote } from "./derive/spreads.js";
 import type { Store } from "./store.js";
+
+const CHAIN_NAMES = [...EVM_CHAINS.map((c) => c.name), "solana"];
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = join(__dirname, "..", "public");
@@ -23,6 +26,24 @@ export function startServer(store: Store): void {
     if (url.pathname === "/api/latest") {
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify(store.latest()));
+      return;
+    }
+
+    if (url.pathname === "/api/board") {
+      const cells = computeBoard(
+        store.latest() as LatestQuote[],
+        CHAIN_NAMES,
+        SIZES_USD,
+      );
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(cells));
+      return;
+    }
+
+    if (url.pathname === "/api/episodes") {
+      const limit = Number(url.searchParams.get("limit") ?? 50);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(store.recentEpisodes(limit)));
       return;
     }
 

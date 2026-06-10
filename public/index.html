@@ -213,8 +213,41 @@
     vertical-align: middle;
   }
 
+  /* ---- dislocation board ---- */
+  .board { margin: 6px 0 30px; }
+  .board table { table-layout: fixed; }
+  .board td, .board th { text-align: center; }
+  .board th:first-child, .board td:first-child {
+    text-align: left;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .board td.self { background: var(--paper-dark); color: rgba(74, 67, 56, 0.35); }
+  .board td .usd {
+    display: block;
+    font-size: 10px;
+    color: var(--ink-soft);
+    font-weight: 400;
+  }
+  .board td.pos { font-weight: 600; }
+  .board td.hot { color: var(--red); font-weight: 600; }
+  .board td.neg { color: rgba(74, 67, 56, 0.55); }
+  .board .note, .catalog .note {
+    margin-top: 8px;
+    font-size: 10px;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+
+  /* ---- event catalog ---- */
+  .catalog { margin-top: 44px; }
+  .catalog td.open-ep { color: var(--red); font-weight: 600; }
+
   /* ---- logbook ---- */
   .logbook { margin-top: 44px; }
+  .board h2, .catalog h2,
   .logbook h2 {
     font-family: "Instrument Serif", serif;
     font-weight: 400;
@@ -307,6 +340,16 @@
     <canvas id="cv-all" height="240"></canvas>
   </div>
 
+  <!-- dislocation board -->
+  <div class="board">
+    <h2 id="board-title">Dislocation board — net round trip</h2>
+    <table id="board-table">
+      <thead></thead>
+      <tbody></tbody>
+    </table>
+    <div class="note">buy USDT on row chain · sell on column chain · net of rebalance cost model (cctp-fast / usdt0 / cex) · hover a cell for gross, cost, transfer time</div>
+  </div>
+
   <!-- single chain behind tabs -->
   <div class="chain-bar">
     <label>Chain</label>
@@ -331,6 +374,20 @@
       </thead>
       <tbody></tbody>
     </table>
+  </div>
+
+  <div class="catalog">
+    <h2>Event catalog</h2>
+    <table id="catalog-table">
+      <thead>
+        <tr>
+          <th>Route</th><th>Opened</th><th>Duration</th>
+          <th>Peak net</th><th>At size</th><th>Est $/trip</th><th>Status</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <div class="note">episode opens at net ≥ 3 bps, closes under 1 bps · derived from raw quotes — `npm run backfill` replays history after cost-model changes</div>
   </div>
 
   <footer>
@@ -527,15 +584,78 @@ function redraw() {
   document.getElementById("chain-venue").textContent = last ? last.venue : "";
 }
 
+// ---- dislocation board ----
+function fmtSize(s) {
+  return s >= 1000000 ? `$${s / 1000000}M` : `$${s / 1000}k`;
+}
+
+function renderBoard(cells) {
+  const atSize = cells.filter((c) => c.size === state.size);
+  document.getElementById("board-title").textContent =
+    `Dislocation board — net round trip at ${fmtSize(state.size)}`;
+  const cell = (from, to) => atSize.find((c) => c.from === from && c.to === to);
+
+  const thead = document.querySelector("#board-table thead");
+  thead.innerHTML =
+    `<tr><th>buy ↓ / sell →</th>` +
+    CHAINS.map((c) => `<th>${c.label}</th>`).join("") +
+    `</tr>`;
+
+  const tbody = document.querySelector("#board-table tbody");
+  tbody.innerHTML = CHAINS.map((row) => {
+    const tds = CHAINS.map((col) => {
+      if (row.id === col.id) return `<td class="self">·</td>`;
+      const c = cell(row.id, col.id);
+      if (!c) return `<td class="neg">no quote</td>`;
+      const cls = c.netBps >= 3 ? "hot" : c.netBps > 0 ? "pos" : "neg";
+      const tip =
+        `gross ${fmtBps(c.grossBps)} bps · cost ${c.costBps.toFixed(2)} bps` +
+        ` · ~${c.minutes} min via ${c.via}`;
+      return `<td class="${cls}" title="${tip}">${fmtBps(c.netBps)}<span class="usd">$${c.netUsd.toFixed(0)}/trip</span></td>`;
+    }).join("");
+    return `<tr><td>${row.label}</td>${tds}</tr>`;
+  }).join("");
+}
+
+function renderCatalog(episodes) {
+  const tbody = document.querySelector("#catalog-table tbody");
+  if (!episodes.length) {
+    tbody.innerHTML =
+      `<tr><td colspan="7" style="text-align:center;color:var(--ink-soft)">no events recorded — the instrument is listening</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = episodes
+    .map((ep) => {
+      const open = ep.closedTs === null;
+      const dur = ((ep.closedTs ?? ep.lastTs) - ep.openedTs) / 60000;
+      const durStr =
+        dur >= 60 ? `${(dur / 60).toFixed(1)} h` : `${Math.max(1, Math.round(dur))} min`;
+      return `<tr>
+        <td>${ep.route}</td>
+        <td>${new Date(ep.openedTs).toLocaleString()}</td>
+        <td>${durStr}</td>
+        <td>${fmtBps(ep.peakBps)} bps</td>
+        <td>${fmtSize(ep.peakSize)}</td>
+        <td>$${ep.peakUsd.toFixed(2)}</td>
+        <td class="${open ? "open-ep" : ""}">${open ? "OPEN" : "closed"}</td>
+      </tr>`;
+    })
+    .join("");
+}
+
 // ---- data ----
 async function refresh() {
   try {
-    const [series, latest] = await Promise.all([
+    const [series, latest, board, episodes] = await Promise.all([
       fetch(`/api/series?minutes=${state.minutes}&size=${state.size}`).then((r) => r.json()),
       fetch(`/api/latest`).then((r) => r.json()),
+      fetch(`/api/board`).then((r) => r.json()),
+      fetch(`/api/episodes?limit=50`).then((r) => r.json()),
     ]);
     lastSeries = series;
     redraw();
+    renderBoard(board);
+    renderCatalog(episodes);
 
     // logbook: chain x direction rows, size columns
     const tbody = document.querySelector("#log-table tbody");

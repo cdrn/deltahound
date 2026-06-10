@@ -1,4 +1,5 @@
 import Database from "better-sqlite3";
+import type { Episode } from "./derive/episodes.js";
 import type { Quote } from "./types.js";
 
 export class Store {
@@ -23,6 +24,17 @@ export class Store {
       );
       CREATE INDEX IF NOT EXISTS idx_quotes_ts ON quotes(ts);
       CREATE INDEX IF NOT EXISTS idx_quotes_chain_ts ON quotes(chain, ts);
+      CREATE TABLE IF NOT EXISTS episodes (
+        id INTEGER PRIMARY KEY,
+        route TEXT NOT NULL,
+        opened_ts INTEGER NOT NULL,
+        closed_ts INTEGER,
+        peak_bps REAL NOT NULL,
+        peak_size REAL NOT NULL,
+        peak_usd REAL NOT NULL,
+        last_ts INTEGER NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_episodes_opened ON episodes(opened_ts);
     `);
     this.insertStmt = this.db.prepare(`
       INSERT INTO quotes (ts, chain, venue, token_in, token_out, amount_in, amount_out, price, bps)
@@ -63,5 +75,85 @@ export class Store {
             AND q.ts = m.max_ts`,
       )
       .all();
+  }
+
+  allQuotesOrdered(): {
+    ts: number;
+    chain: string;
+    tokenIn: string;
+    tokenOut: string;
+    amountIn: number;
+    price: number;
+  }[] {
+    return this.db
+      .prepare(
+        `SELECT ts, chain, token_in AS tokenIn, token_out AS tokenOut,
+                amount_in AS amountIn, price
+         FROM quotes ORDER BY ts ASC`,
+      )
+      .all() as never;
+  }
+
+  // ---- episodes ----
+
+  private rowToEpisode(r: Record<string, unknown>): Episode {
+    return {
+      id: r.id as number,
+      route: r.route as string,
+      openedTs: r.opened_ts as number,
+      closedTs: r.closed_ts as number | null,
+      peakBps: r.peak_bps as number,
+      peakSize: r.peak_size as number,
+      peakUsd: r.peak_usd as number,
+      lastTs: r.last_ts as number,
+    };
+  }
+
+  openEpisodes(): Episode[] {
+    return (
+      this.db
+        .prepare(`SELECT * FROM episodes WHERE closed_ts IS NULL`)
+        .all() as Record<string, unknown>[]
+    ).map((r) => this.rowToEpisode(r));
+  }
+
+  recentEpisodes(limit: number): Episode[] {
+    return (
+      this.db
+        .prepare(`SELECT * FROM episodes ORDER BY opened_ts DESC LIMIT ?`)
+        .all(limit) as Record<string, unknown>[]
+    ).map((r) => this.rowToEpisode(r));
+  }
+
+  openEpisode(ep: Omit<Episode, "id" | "closedTs">): Episode {
+    const info = this.db
+      .prepare(
+        `INSERT INTO episodes (route, opened_ts, peak_bps, peak_size, peak_usd, last_ts)
+         VALUES (@route, @openedTs, @peakBps, @peakSize, @peakUsd, @lastTs)`,
+      )
+      .run(ep as never);
+    return { ...ep, id: Number(info.lastInsertRowid), closedTs: null };
+  }
+
+  updateEpisodePeak(ep: Episode): void {
+    this.db
+      .prepare(
+        `UPDATE episodes SET peak_bps = ?, peak_size = ?, peak_usd = ?, last_ts = ? WHERE id = ?`,
+      )
+      .run(ep.peakBps, ep.peakSize, ep.peakUsd, ep.lastTs, ep.id);
+  }
+
+  touchEpisode(id: number, ts: number): void {
+    this.db.prepare(`UPDATE episodes SET last_ts = ? WHERE id = ?`).run(ts, id);
+  }
+
+  closeEpisode(id: number, ts: number): void {
+    this.db
+      .prepare(`UPDATE episodes SET closed_ts = ? WHERE id = ?`)
+      .run(ts, id);
+  }
+
+  clearEpisodes(): void {
+    this.db.exec(`DELETE FROM episodes`);
   }
 }

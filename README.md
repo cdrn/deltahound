@@ -28,10 +28,22 @@ Default config uses public RPCs and Jupiter's free tier; override with env vars:
 | `DB_PATH` | `deltahound.db` |
 | `PORT` | `4747` |
 
+## Operator view
+
+Raw quotes are the source of truth; everything an operator sees is derived and can be recomputed from history:
+
+- **Dislocation board** — chain×chain matrix of net round-trip edge (buy USDT on row chain, sell on column chain) after the rebalance cost model in `src/costs.ts` (CCTP fast transfer for USDC, USDT0 where it exists, CEX otherwise). The net number assumes inventory on both sides — instant capture, rebalance amortized; a bridge-through trader pays the same costs plus the transfer-time spread risk shown in the cell tooltip.
+- **Event catalog** — episodes open when a route's best net spread crosses 3 bps and close under 1 bps (hysteresis). Each records peak bps, best size, est. $/trip, and duration — duration is the operator's edge filter: seconds belong to bots, minutes-to-hours are capturable.
+- `npm run backfill` replays all stored quotes through the episode detector — run it after changing thresholds or the cost model.
+
+The cost model is a conservative editable table, not live quotes; the board is only as honest as `src/costs.ts`.
+
 ## API
 
 - `GET /api/series?minutes=60&size=100000` — time series of quotes
 - `GET /api/latest` — most recent quote per chain × direction × size
+- `GET /api/board` — dislocation matrix, all sizes, net of cost model
+- `GET /api/episodes?limit=50` — event catalog
 
 ## Roadmap
 
