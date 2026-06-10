@@ -1,5 +1,14 @@
 export const SIZES_USD = [1_000, 10_000, 100_000, 1_000_000];
 
+// Pairs quoted on every chain that lists both legs; both directions.
+export const PAIRS: { base: string; quote: string }[] = [
+  { base: "USDC", quote: "USDT" },
+];
+
+// Episode detection thresholds (net bps after cost model)
+export const EPISODE_OPEN_BPS = Number(process.env.EPISODE_OPEN_BPS ?? 3);
+export const EPISODE_CLOSE_BPS = Number(process.env.EPISODE_CLOSE_BPS ?? 1);
+
 export const POLL_INTERVAL_MS = Number(process.env.POLL_INTERVAL_MS ?? 30_000);
 
 export const DB_PATH = process.env.DB_PATH ?? "deltahound.db";
