@@ -1,0 +1,33 @@
+{
+  "name": "deltahound",
+  "version": "0.2.0",
+  "description": "Stablecoin venue-basis seismograph: executable cross-chain stablecoin prices at size",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cdrn/deltahound.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/cdrn/deltahound/issues"
+  },
+  "homepage": "https://github.com/cdrn/deltahound#readme",
+  "type": "module",
+  "dependencies": {
+    "better-sqlite3": "^12.10.0",
+    "viem": "^2.52.2"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^25.9.2",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3"
+  }
+}
